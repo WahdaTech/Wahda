@@ -1,0 +1,4 @@
+[submodule "contrib"]
+	path = contrib
+	url = git@github.com:WahdaTech/Wahda-contrib.git
+	branch = trunk
