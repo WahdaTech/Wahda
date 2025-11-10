@@ -1,4 +1,4 @@
-__all__ = ["get_logger", "otel_trace", "get_root_tracer"]
+__all__ = ["get_logger", "get_root_tracer", "otel_trace"]
 
 import inspect
 import logging
