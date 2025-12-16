@@ -79,7 +79,10 @@ class BinanceFuturesAccountInfo(msgspec.Struct, frozen=True):
 
 
 class BinanceClientFuturesAccountInfo(core_.BinanceClientCore):
-    decoder = msgspec.json.Decoder(strict=False, type=BinanceFuturesAccountInfo)
+    account_info_decoder = msgspec.json.Decoder(
+        strict=False,
+        type=BinanceFuturesAccountInfo,
+    )
 
     def __init__(self) -> None:
         super().__init__()
@@ -95,7 +98,7 @@ class BinanceClientFuturesAccountInfo(core_.BinanceClientCore):
 
     @staticmethod
     def _parse_futures_account_info(json_str: str) -> BinanceFuturesAccountInfo:
-        return BinanceClientFuturesAccountInfo.decoder.decode(json_str)
+        return BinanceClientFuturesAccountInfo.account_info_decoder.decode(json_str)
 
     async def fetch_futures_account_info(
         self, account: structures.BinanceAccount
