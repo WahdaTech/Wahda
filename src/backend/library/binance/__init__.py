@@ -4,6 +4,7 @@ from .client.core_ import TRequestParams
 from .client.futures_account_info import BinanceFuturesAccountInfo
 from .client.futures_balance import BinanceFuturesBalance
 from .client.futures_open_orders import BinanceFuturesOpenOrders
+from .client.futures_position_side import BinanceDualSidePosition
 from .client.futures_ticker_price import BinanceFuturesTickerPriceSymbol
 from .exceptions import (
     BinanceClientException,
@@ -18,6 +19,7 @@ __all__ = [
     "BinanceClientException",
     "BinanceClientRateLimiterException",
     "BinanceClientServerException",
+    "BinanceDualSidePosition",
     "BinanceFuturesAccountInfo",
     "BinanceFuturesBalance",
     "BinanceFuturesOpenOrders",
