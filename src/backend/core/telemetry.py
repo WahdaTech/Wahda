@@ -1,4 +1,4 @@
-__all__ = ["get_logger", "get_root_tracer", "otel_trace"]
+__all__ = ["OtelMetricsBase", "get_logger", "get_root_tracer", "otel_trace"]
 
 import inspect
 import logging
@@ -7,26 +7,29 @@ import sys
 
 import loguru
 import opentelemetry._logs as _otel_logs
-import opentelemetry.exporter.otlp.proto.grpc._log_exporter as _otel_otlp_exporter
+import opentelemetry.exporter.otlp.proto.grpc._log_exporter as _otlp_log_exporter
+import opentelemetry.exporter.otlp.proto.grpc.metric_exporter as _otlp_metric_exporter
+import opentelemetry.metrics as otel_metrics
 import opentelemetry.sdk._logs as _otel_sdk_logs
 import opentelemetry.sdk._logs.export as _otel_sdk_logs_export
+import opentelemetry.sdk.metrics as _otel_sdk_metrics
+import opentelemetry.sdk.metrics.export as _otel_sdk_metrics_export
 import opentelemetry.sdk.resources as _otel_sdk_resources
 import opentelemetry.sdk.trace as _otel_sdk_trace
 import opentelemetry.trace as otel_trace
 
+from . import env
 
-def __get_env(var_name: str, default: str) -> str:
-    env_prefix = "WD"
-    return os.environ.get(f"{env_prefix}_{var_name}", default)
-
-
-WD_OTEL_ENABLED = __get_env("OTEL_ENABLED", "0") == "1"
-WD_OTEL_SERVICE_NAME = __get_env("OTEL_SERVICE_NAME", "wahda")
-WD_OTEL_OTLP_ENDPOINT = __get_env("OTEL_OTLP_ENDPOINT", "127.0.0.1:4317")
-WD_LOGGER_OTEL_HANDLER = __get_env("LOGGER_OTEL_HANDLER", "otlp")
-WD_LOGGER_OTEL_LEVEL = __get_env("LOGGER_OTEL_LEVEL", "DEBUG")
-WD_LOGGER_CONSOLE_LEVEL = __get_env("LOGGER_CONSOLE_LEVEL", "INFO")
-WD_LOGGER_CONSOLE_COLORIZE = __get_env("LOGGER_CONSOLE_COLORIZE", "1") == "1"
+WD_OTEL_ENABLED = env.get_env("OTEL_ENABLED", "0") == "1"
+WD_OTEL_SERVICE_NAME = env.get_env("OTEL_SERVICE_NAME", "wahda")
+WD_OTEL_OTLP_ENDPOINT = env.get_env("OTEL_OTLP_ENDPOINT", "127.0.0.1:4317")
+WD_LOGGER_OTEL_HANDLER = env.get_env("LOGGER_OTEL_HANDLER", "otlp")
+WD_LOGGER_OTEL_LEVEL = env.get_env("LOGGER_OTEL_LEVEL", "DEBUG")
+WD_LOGGER_CONSOLE_LEVEL = env.get_env("LOGGER_CONSOLE_LEVEL", "INFO")
+WD_LOGGER_CONSOLE_COLORIZE = env.get_env("LOGGER_CONSOLE_COLORIZE", "1") == "1"
+WD_OTEL_METRICS_EXPORT_INTERVAL_MS = int(
+    env.get_env("OTEL_METRICS_EXPORT_INTERVAL_MS", "10000")
+)
 
 
 class InterceptHandler(logging.Handler):
@@ -119,7 +122,7 @@ if WD_OTEL_ENABLED and WD_LOGGER_OTEL_HANDLER in ("console", "otlp"):
 
         case "otlp":
             processor = _otel_sdk_logs_export.BatchLogRecordProcessor(
-                _otel_otlp_exporter.OTLPLogExporter(
+                _otlp_log_exporter.OTLPLogExporter(
                     endpoint=WD_OTEL_OTLP_ENDPOINT,
                     insecure=True,
                 )
@@ -153,3 +156,34 @@ loguru.logger.add(
     backtrace=False,
     enqueue=True,
 )
+
+
+class OtelMetricsBase:
+    _provider_initialized = False
+
+    def __init__(self) -> None:
+        if WD_OTEL_ENABLED and not OtelMetricsBase._provider_initialized:
+            resource = _otel_sdk_resources.Resource.create(
+                {
+                    "service.name": WD_OTEL_SERVICE_NAME,
+                    "service.instance.id": os.uname().nodename,
+                }
+            )
+            exporter = _otlp_metric_exporter.OTLPMetricExporter(
+                endpoint=WD_OTEL_OTLP_ENDPOINT,
+                insecure=True,
+            )
+            reader = _otel_sdk_metrics_export.PeriodicExportingMetricReader(
+                exporter, export_interval_millis=WD_OTEL_METRICS_EXPORT_INTERVAL_MS
+            )
+            provider = _otel_sdk_metrics.MeterProvider(
+                resource=resource, metric_readers=[reader]
+            )
+            otel_metrics.set_meter_provider(provider)
+            OtelMetricsBase._provider_initialized = True
+
+        self._meter = otel_metrics.get_meter(WD_OTEL_SERVICE_NAME)
+
+    @property
+    def meter(self) -> otel_metrics.Meter:
+        return self._meter
