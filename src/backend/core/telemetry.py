@@ -21,7 +21,7 @@ def __get_env(var_name: str, default: str) -> str:
 
 
 WD_OTEL_ENABLED = __get_env("OTEL_ENABLED", "0") == "1"
-WD_OTEL_SERVICE_NAME = __get_env("OTEL_SERVICE_NAME", "tradelink")
+WD_OTEL_SERVICE_NAME = __get_env("OTEL_SERVICE_NAME", "wahda")
 WD_OTEL_OTLP_ENDPOINT = __get_env("OTEL_OTLP_ENDPOINT", "127.0.0.1:4317")
 WD_LOGGER_OTEL_HANDLER = __get_env("LOGGER_OTEL_HANDLER", "otlp")
 WD_LOGGER_OTEL_LEVEL = __get_env("LOGGER_OTEL_LEVEL", "DEBUG")
